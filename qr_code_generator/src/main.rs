@@ -1,10 +1,9 @@
 use std::env;
-/* 
 use qrcode::QrCode;
-use qrcode::render::unicode;
 use image::Luma;
-use std::fs::File;
-*/
+use std::fs;
+use std::path::Path;
+
 
 fn show_help()
 {
@@ -38,8 +37,15 @@ DÉPENDANCES:
 
 }
 
-fn main() {
+fn main()
+{
     let args: Vec<String> = env::args().collect();
+
+    let path_to_save_qrcode = "qrcode_output";
+    if !Path::new(path_to_save_qrcode).exists() 
+    {
+        let _ = fs::create_dir(path_to_save_qrcode);
+    }
 
     match args.as_slice()
     {
@@ -52,10 +58,41 @@ fn main() {
 
         [_program, flag, value] if flag == "-t" || flag == "--text" => {
             println!("text a transformer en Qr code : {}", value);
+            // encode Qrcode
+            let code_bits = QrCode::new(value.as_bytes()).unwrap();
+            // print Qrcode
+            let qrcode_string = code_bits.render()
+                .light_color(' ')
+                .dark_color('#')
+                .build();
+            println!("{}", qrcode_string);
+
         }
 
         [_program, flag1, value1, flag2, value2] if (flag1 == "-t" || flag1 == "--text") && (flag2 == "-o" || flag2 == "--output") => {
+            // check if save name is a png
+            let save_name;
+            if !flag2.ends_with(".png")
+            {
+                save_name = format!("{}.png", value2);
+            }
+            else 
+            {
+                save_name = value2.clone();
+            }
             println!("text a transformer en Qr code : {}\nsauvegarde {}", value1, value2);
+
+            let code_bits = QrCode::new(value1.as_bytes()).unwrap();
+            let image = code_bits.render::<Luma<u8>>().build();
+            // Save the image.
+            let path = format!("./qrcode_output/{}", save_name);
+            image.save(path).unwrap();
+            // print Qrcode
+            let qrcode_string = code_bits.render()
+                .light_color(' ')
+                .dark_color('#')
+                .build();
+            println!("{}", qrcode_string);
         }
 
         _ => {
@@ -63,5 +100,4 @@ fn main() {
             eprintln!("Usage : qrcli -t <texte> [--output <fichier.png>]");
         }
     }
-
 }
